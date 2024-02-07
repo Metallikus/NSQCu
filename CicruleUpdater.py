@@ -1,3 +1,4 @@
+#! /usr/bin/env python3
 import tkinter
 from tkinter import *
 from tkinter import ttk
