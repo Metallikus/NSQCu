@@ -1,10 +1,12 @@
 #! /usr/bin/env python3
+import time
 import tkinter as tk
 import urllib.request
 import shutil
 import os
 import zipfile
 import os.path
+from threading import Thread
 
 top = tk.Tk()
 addons = {
@@ -99,54 +101,62 @@ def dl(count, block_size, total_size):
     top.title(str('{0:.2g}'.format(percent)) + "%")
 
 
+def update_main_addon(addon_link, addon_tmp_path, addon_final_path):
+    urllib.request.urlretrieve(addon_link, "main.zip", reporthook=dl)
+    archive = 'main.zip'
+    if os.path.isdir('temp'):
+        shutil.rmtree('temp/')
+    archive = 'main.zip'
+    with zipfile.ZipFile(archive, 'r') as zip_file:
+        zip_file.extractall("temp")
+    file_source = addon_tmp_path
+    file_destination = addon_final_path
+    if not os.path.exists(file_destination):
+        os.mkdir(file_destination)
+    get_files = os.listdir(file_source)
+    shutil.copytree(file_source, file_destination, dirs_exist_ok=True)
+    if os.path.isfile('main.zip'):
+        os.remove('main.zip')
+    if os.path.isdir('temp'):
+        shutil.rmtree('temp/')
+    update_addons()
+
+
 def print_value(name, addon):
     def on_call():
         if addon['check_var'].get() == 0:
             if addon['файл'] == 0:
                 if os.path.isdir(addon['путь']):
                     shutil.rmtree(addon['путь'])
-                top.after(10000, update)
+                Thread(target=update_addons).start()
             if addon['файл'] == 1:
                 if os.path.isfile(addon['путь']):
                     os.remove(addon['путь'])
-                top.after(10000, update)
+                Thread(target=update_addons).start()
             if addon['файл'] == 2:
                 if os.path.isdir(addon['путь к аддону']):
                     shutil.rmtree(addon['путь к аддону'])
-                top.after(10000, update)
+                Thread(target=update_addons).start()
         else:
             if addon['файл'] == 0 or addon['файл'] == 2:
-                urllib.request.urlretrieve(addon['link'], "main.zip", reporthook=dl)
-                archive = 'main.zip'
-                if os.path.isdir('temp'):
-                    shutil.rmtree('temp/')
-                archive = 'main.zip'
-                with zipfile.ZipFile(archive, 'r') as zip_file:
-                    zip_file.extractall("temp")
-                file_source = addon['временный путь']
-                file_destination = addon['путь']
-                if not os.path.exists(file_destination):
-                    os.mkdir(file_destination)
-                get_files = os.listdir(file_source)
-                shutil.copytree(file_source, file_destination, dirs_exist_ok=True)
-                if os.path.isfile('main.zip'):
-                    os.remove('main.zip')
-                if os.path.isdir('temp'):
-                    shutil.rmtree('temp/')
-                top.after(10000, update)
+                Thread(target=update_main_addon, args=(addon['link'],
+                                                       addon['временный путь'],
+                                                       addon['путь'])).start()
             if addon['файл'] == 1:
                 urllib.request.urlretrieve(addon['link'], addon['путь'], reporthook=dl)
-                top.after(10000, update)
+                Thread(target=update_addons).start()
 
     return on_call
 
 
-def update():
+def update_addons():
     global score
     score += 1
     ScoreL.configure(text=score)
     if score < limit:
-        # schedule next update 1 second later
+        # Это чтобы не писать top.after(10000, update_addons)
+        time.sleep(10000)
+        # schedule next update_addons 1 second later
         if os.path.isfile('Interface/AddOns/NSQC/vers'):
             f = urllib.request.urlopen('https://github.com/Vladgobelen/NSQC/blob/main/vers').read().decode(
                 'utf-8').strip()
@@ -192,9 +202,8 @@ def update():
                 shutil.rmtree('temp/')
         file.close()
         del f
-        top.after(10000, update)
-
-
+        #top.after(10000, update_addons)
+        #Зачем вообще был нужен этот вызов?
 
 
 if __name__ == "__main__":
@@ -218,6 +227,5 @@ if __name__ == "__main__":
 
     ScoreL = tk.Label(top, text=score)
     ScoreL.pack()
-
-    top.after(10000, update)
+    Thread(target=update_addons).start()
     top.mainloop()
