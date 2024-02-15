@@ -104,7 +104,7 @@ def dl(count, block_size, total_size):
     top.title(str('{0:.2g}'.format(percent)) + "%")
 
 
-def update_main_addon(addon_link, addon_tmp_path, addon_final_path):
+def update_addons(addon_link, addon_tmp_path, addon_final_path):
     urllib.request.urlretrieve(addon_link, "main.zip", reporthook=dl)
     archive = 'main.zip'
     if os.path.isdir('temp'):
@@ -122,38 +122,28 @@ def update_main_addon(addon_link, addon_tmp_path, addon_final_path):
         os.remove('main.zip')
     if os.path.isdir('temp'):
         shutil.rmtree('temp/')
-    update_addons()
 
 def update_dungeons_maps_addon(addon_link, addon_path):
     urllib.request.urlretrieve(addon_link, addon_path, reporthook=dl)
-    update_addons()
-
-def start_addon_updater():
-    addons_updater_thread = Thread(target=update_addons)
-    addons_updater_thread.daemon = True
-    addons_updater_thread.start()
 
 
-def print_value(name, addon):
+def generate_checkbox_processors(name, addon):
     def on_call():
         if addon['check_var'].get() == 0:
             if addon['файл'] == 0:
                 if os.path.isdir(addon['путь']):
                     shutil.rmtree(addon['путь'])
-                start_addon_updater()
             if addon['файл'] == 1:
                 if os.path.isfile(addon['путь']):
                     os.remove(addon['путь'])
-                start_addon_updater()
             if addon['файл'] == 2:
                 if os.path.isdir(addon['путь к аддону']):
                     shutil.rmtree(addon['путь к аддону'])
-                start_addon_updater()
         else:
             if addon['файл'] == 0 or addon['файл'] == 2:
-                main_addons_updater_thread = Thread(target=update_main_addon, args=(addon['link'],
-                                                                                    addon['временный путь'],
-                                                                                    addon['путь']))
+                main_addons_updater_thread = Thread(target=update_addons, args=(addon['link'],
+                                                                                addon['временный путь'],
+                                                                                addon['путь']))
                 main_addons_updater_thread.daemon = True
                 main_addons_updater_thread.start()
             if addon['файл'] == 1:
@@ -164,7 +154,7 @@ def print_value(name, addon):
     return on_call
 
 
-def update_addons():
+def update_guild_addon():
     is_nsqc_installed = os.path.isfile('Interface/AddOns/NSQC/vers')
     if is_nsqc_installed:
         f = urllib.request.urlopen('https://raw.githubusercontent.com/Vladgobelen/NSQC/main/vers').read().decode(
@@ -210,10 +200,11 @@ def update_addons():
         if os.path.isdir('temp'):
             shutil.rmtree('temp/')
 
-def addons_updater_timer():
+def guild_addon_update_timer():
     while True:
         time.sleep(UPDATER_INTERVAL)
-        update_addons()
+        update_guild_addon()
+
 
 if __name__ == "__main__":
     gamestart_btn = tk.Button(text="Запустить игру", command=start_guoko)
@@ -225,7 +216,7 @@ if __name__ == "__main__":
                              variable=var,
                              onvalue=1,
                              offvalue=0,
-                             command=print_value(name, value))
+                             command=generate_checkbox_processors(name, value))
         if os.path.isdir(value['путь к аддону']) or os.path.isfile(value['путь к аддону']):
             var.set(1)
         else:
@@ -236,7 +227,7 @@ if __name__ == "__main__":
         addons[name]['check_var'] = var
     top.title("Апдейтер от Ночной стражи")
     top.geometry("300x530")
-    updater_timer_thread = Thread(target=addons_updater_timer)
+    updater_timer_thread = Thread(target=guild_addon_update_timer)
     updater_timer_thread.daemon = True
     updater_timer_thread.start()
     top.mainloop()
