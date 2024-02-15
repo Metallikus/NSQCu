@@ -8,6 +8,8 @@ import zipfile
 import os.path
 from threading import Thread
 
+UPDATER_INTERVAL = 10
+
 top = tk.Tk()
 
 addons = {
@@ -159,66 +161,59 @@ def print_value(name, addon):
                                                                                              addon['путь']))
                 dmaps_addon_updater_thread.daemon = True
                 dmaps_addon_updater_thread.start()
-
     return on_call
 
 
 def update_addons():
-    global score
-    score += 1
-    ScoreL.configure(text=score)
-    # Это чтобы не писать top.after(10000, update_addons)
-    time.sleep(10)
-    if score < limit:
-        # schedule next update_addons 1 second later
-        if os.path.isfile('Interface/AddOns/NSQC/vers'):
-            f = urllib.request.urlopen('https://github.com/Vladgobelen/NSQC/blob/main/vers').read().decode(
-                'utf-8').strip()
-            file = open('Interface/AddOns/NSQC/vers', 'r')
-        else:
-            f = "нету"
-        if not os.path.exists('Data/ruRU/patch-ruRU-M.MPQ'):
-            urllib.request.urlretrieve("https://hub.mos.ru/vladgobelen/nsqcmap/-/raw/main/patch-ruRU-M.MPQ",
-                                       "patch-ruRU-M.MPQ")
-            os.replace("patch-ruRU-M.MPQ", "Data/ruRU/patch-ruRU-M.MPQ")
-            urllib.request.urlretrieve("https://github.com/Trimitor/WDM-addons/archive/refs/heads/main.zip", "main.zip")
-            if os.path.isdir('temp'):
-                shutil.rmtree('temp/')
-            archive = 'main.zip'
-            with zipfile.ZipFile(archive, 'r') as zip_file:
-                zip_file.extractall("temp")
-            file_source = 'temp/WDM-addons-main/WDM/'
-            file_destination = 'Interface/AddOns/WDM/'
-            if not os.path.exists(file_destination):
-                os.mkdir(file_destination)
-            get_files = os.listdir(file_source)
-            shutil.copytree(file_source, file_destination, dirs_exist_ok=True)
-            if os.path.isfile('main.zip'):
-                os.remove('main.zip')
-            if os.path.isdir('temp'):
-                shutil.rmtree('temp/')
-        if f == "нету" or not file.readline().strip() in f:
-            if os.path.isdir('temp'):
-                shutil.rmtree('temp/')
-            urllib.request.urlretrieve("https://github.com/Vladgobelen/NSQC/archive/refs/heads/main.zip", "main.zip")
-            archive = 'main.zip'
-            with zipfile.ZipFile(archive, 'r') as zip_file:
-                zip_file.extractall("temp")
-            file_source = 'temp/NSQC-main/'
-            file_destination = 'Interface/AddOns/NSQC/'
-            if not os.path.exists(file_destination):
-                os.mkdir(file_destination)
-            get_files = os.listdir(file_source)
-            shutil.copytree(file_source, file_destination, dirs_exist_ok=True)
-            if os.path.isfile('main.zip'):
-                os.remove('main.zip')
-            if os.path.isdir('temp'):
-                shutil.rmtree('temp/')
-        file.close()
-        del f
-        # top.after(10000, update_addons)
-        # Зачем вообще был нужен этот вызов?
+    is_nsqc_installed = os.path.isfile('Interface/AddOns/NSQC/vers')
+    if is_nsqc_installed:
+        f = urllib.request.urlopen('https://raw.githubusercontent.com/Vladgobelen/NSQC/main/vers').read().decode(
+            'utf-8').strip()
+        with open('Interface/AddOns/NSQC/vers', 'r') as file:
+            vers_file_content = file.readline().strip()
+    if not os.path.exists('Data/ruRU/patch-ruRU-M.MPQ'):
+        urllib.request.urlretrieve("https://hub.mos.ru/vladgobelen/nsqcmap/-/raw/main/patch-ruRU-M.MPQ",
+                                   "patch-ruRU-M.MPQ")
+        os.replace("patch-ruRU-M.MPQ", "Data/ruRU/patch-ruRU-M.MPQ")
+        urllib.request.urlretrieve("https://github.com/Trimitor/WDM-addons/archive/refs/heads/main.zip", "main.zip")
+        if os.path.isdir('temp'):
+            shutil.rmtree('temp/')
+        archive = 'main.zip'
+        with zipfile.ZipFile(archive, 'r') as zip_file:
+            zip_file.extractall("temp")
+        file_source = 'temp/WDM-addons-main/WDM/'
+        file_destination = 'Interface/AddOns/WDM/'
+        if not os.path.exists(file_destination):
+            os.mkdir(file_destination)
+        get_files = os.listdir(file_source)
+        shutil.copytree(file_source, file_destination, dirs_exist_ok=True)
+        if os.path.isfile('main.zip'):
+            os.remove('main.zip')
+        if os.path.isdir('temp'):
+            shutil.rmtree('temp/')
 
+    if not is_nsqc_installed or vers_file_content not in f:
+        if os.path.isdir('temp'):
+            shutil.rmtree('temp/')
+        urllib.request.urlretrieve("https://github.com/Vladgobelen/NSQC/archive/refs/heads/main.zip", "main.zip")
+        archive = 'main.zip'
+        with zipfile.ZipFile(archive, 'r') as zip_file:
+            zip_file.extractall("temp")
+        file_source = 'temp/NSQC-main/'
+        file_destination = 'Interface/AddOns/NSQC/'
+        if not os.path.exists(file_destination):
+            os.mkdir(file_destination)
+        get_files = os.listdir(file_source)
+        shutil.copytree(file_source, file_destination, dirs_exist_ok=True)
+        if os.path.isfile('main.zip'):
+            os.remove('main.zip')
+        if os.path.isdir('temp'):
+            shutil.rmtree('temp/')
+
+def addons_updater_timer():
+    while True:
+        time.sleep(UPDATER_INTERVAL)
+        update_addons()
 
 if __name__ == "__main__":
     gamestart_btn = tk.Button(text="Запустить игру", command=start_guoko)
@@ -241,10 +236,7 @@ if __name__ == "__main__":
         addons[name]['check_var'] = var
     top.title("Апдейтер от Ночной стражи")
     top.geometry("300x530")
-    limit = 10
-    score = 0
-
-    ScoreL = tk.Label(top, text=score)
-    ScoreL.pack()
-    start_addon_updater()
+    updater_timer_thread = Thread(target=addons_updater_timer)
+    updater_timer_thread.daemon = True
+    updater_timer_thread.start()
     top.mainloop()
