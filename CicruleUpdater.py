@@ -122,6 +122,10 @@ def update_main_addon(addon_link, addon_tmp_path, addon_final_path):
         shutil.rmtree('temp/')
     update_addons()
 
+def update_dungeons_maps_addon(addon_link, addon_path):
+    urllib.request.urlretrieve(addon_link, addon_path, reporthook=dl)
+    update_addons()
+
 def start_addon_updater():
     addons_updater_thread = Thread(target=update_addons)
     addons_updater_thread.daemon = True
@@ -146,13 +150,15 @@ def print_value(name, addon):
         else:
             if addon['файл'] == 0 or addon['файл'] == 2:
                 main_addons_updater_thread = Thread(target=update_main_addon, args=(addon['link'],
-                                                       addon['временный путь'],
-                                                       addon['путь']))
+                                                                                    addon['временный путь'],
+                                                                                    addon['путь']))
                 main_addons_updater_thread.daemon = True
                 main_addons_updater_thread.start()
             if addon['файл'] == 1:
-                urllib.request.urlretrieve(addon['link'], addon['путь'], reporthook=dl)
-                start_addon_updater()
+                dmaps_addon_updater_thread = Thread(target=update_dungeons_maps_addon, args=(addon['link'],
+                                                                                             addon['путь']))
+                dmaps_addon_updater_thread.daemon = True
+                dmaps_addon_updater_thread.start()
 
     return on_call
 
@@ -210,8 +216,8 @@ def update_addons():
                 shutil.rmtree('temp/')
         file.close()
         del f
-        #top.after(10000, update_addons)
-        #Зачем вообще был нужен этот вызов?
+        # top.after(10000, update_addons)
+        # Зачем вообще был нужен этот вызов?
 
 
 if __name__ == "__main__":
