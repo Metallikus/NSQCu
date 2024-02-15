@@ -9,6 +9,7 @@ import os.path
 from threading import Thread
 
 top = tk.Tk()
+
 addons = {
     'NSQC': {"link": "https://github.com/Vladgobelen/NSQC/archive/refs/heads/main.zip",
              "описание": "Гильдейский аддон для Ночной стражи", "путь": "Interface/AddOns/NSQC/", "файл": 0,
@@ -121,6 +122,11 @@ def update_main_addon(addon_link, addon_tmp_path, addon_final_path):
         shutil.rmtree('temp/')
     update_addons()
 
+def start_addon_updater():
+    addons_updater_thread = Thread(target=update_addons)
+    addons_updater_thread.daemon = True
+    addons_updater_thread.start()
+
 
 def print_value(name, addon):
     def on_call():
@@ -128,23 +134,25 @@ def print_value(name, addon):
             if addon['файл'] == 0:
                 if os.path.isdir(addon['путь']):
                     shutil.rmtree(addon['путь'])
-                Thread(target=update_addons).start()
+                start_addon_updater()
             if addon['файл'] == 1:
                 if os.path.isfile(addon['путь']):
                     os.remove(addon['путь'])
-                Thread(target=update_addons).start()
+                start_addon_updater()
             if addon['файл'] == 2:
                 if os.path.isdir(addon['путь к аддону']):
                     shutil.rmtree(addon['путь к аддону'])
-                Thread(target=update_addons).start()
+                start_addon_updater()
         else:
             if addon['файл'] == 0 or addon['файл'] == 2:
-                Thread(target=update_main_addon, args=(addon['link'],
+                main_addons_updater_thread = Thread(target=update_main_addon, args=(addon['link'],
                                                        addon['временный путь'],
-                                                       addon['путь'])).start()
+                                                       addon['путь']))
+                main_addons_updater_thread.daemon = True
+                main_addons_updater_thread.start()
             if addon['файл'] == 1:
                 urllib.request.urlretrieve(addon['link'], addon['путь'], reporthook=dl)
-                Thread(target=update_addons).start()
+                start_addon_updater()
 
     return on_call
 
@@ -153,9 +161,9 @@ def update_addons():
     global score
     score += 1
     ScoreL.configure(text=score)
+    # Это чтобы не писать top.after(10000, update_addons)
+    time.sleep(10)
     if score < limit:
-        # Это чтобы не писать top.after(10000, update_addons)
-        time.sleep(10000)
         # schedule next update_addons 1 second later
         if os.path.isfile('Interface/AddOns/NSQC/vers'):
             f = urllib.request.urlopen('https://github.com/Vladgobelen/NSQC/blob/main/vers').read().decode(
@@ -211,7 +219,12 @@ if __name__ == "__main__":
     gamestart_btn.pack()
     for name, value in addons.items():
         var = tk.IntVar()
-        btn = tk.Checkbutton(top, text=name, variable=var, onvalue=1, offvalue=0, command=print_value(name, value))
+        btn = tk.Checkbutton(top,
+                             text=name,
+                             variable=var,
+                             onvalue=1,
+                             offvalue=0,
+                             command=print_value(name, value))
         if os.path.isdir(value['путь к аддону']) or os.path.isfile(value['путь к аддону']):
             var.set(1)
         else:
@@ -227,5 +240,5 @@ if __name__ == "__main__":
 
     ScoreL = tk.Label(top, text=score)
     ScoreL.pack()
-    Thread(target=update_addons).start()
+    start_addon_updater()
     top.mainloop()
